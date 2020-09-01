@@ -1,30 +1,30 @@
-const User = require('./User');
-const Post = require('./Post')
+//MODELS>>>
+const User = require("./User");
+const Post = require("./Post");
 const Vote = require('./Vote');
-const Comment = require('./Comment')
-
-// create associations
-User.hasMany(Post, {
-    foreignKey: 'user_id'
-  });
-
-Post.belongsTo(User, {
-  foreignKey: 'user_id',
-});
+const Comment = require('./Comment');
 
 User.belongsToMany(Post, {
     through: Vote,
     as: 'voted_posts',
     foreignKey: 'user_id'
   });
+  
+  Post.belongsToMany(User, {
+    through: Vote,
+    as: 'voted_posts',
+    foreignKey: 'post_id'
+  });
 
-Post.belongsToMany(User, {
-  through: Vote,
-  as: 'voted_posts',
-  foreignKey: 'post_id'
-});
+// create associations
+User.hasMany(Post, {
+    foreignKey: 'user_id'
+  });
 
-Vote.belongsTo(User, {
+  Post.belongsTo(User, {
+    foreignKey: 'user_id',
+  });
+  Vote.belongsTo(User, {
     foreignKey: 'user_id'
   });
   

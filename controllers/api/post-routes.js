@@ -4,37 +4,37 @@ const { Post, User, Vote, Comment } = require('../../models');
 
 // get all users
 router.get('/', (req, res) => {
-    console.log('======================');
-    Post.findAll({
-        attributes: [
-            'id',
-            'post_url',
-            'title',
-            'created_at',
-            [sequelize.literal('(SELECT COUNT(*) FROM vote WHERE post.id = vote.post_id)'), 'vote_count']
-          ],
-          include: [
-            // include the Comment model here:
-            {
+  console.log('===============');
+  Post.findAll({
+      attributes: [
+          'id',
+          'post_url',
+          'title',
+          'created_at',
+          [sequelize.literal('(SELECT COUNT(*) FROM vote WHERE post.id = vote.post_id)'), 'vote_count']
+      ],
+      order: [['created_at', 'DESC']],
+      include: [ // this makes a JOIN 
+          {
               model: Comment,
               attributes: ['id', 'comment_text', 'post_id', 'user_id', 'created_at'],
               include: {
-                model: User,
-                attributes: ['username']
+                  model: User,
+                  attributes: ['username']
               }
-            },
-            {
+          },
+          {
               model: User,
               attributes: ['username']
-            }
-          ]
-         })
-    .then(dbPostData => res.json(dbPostData))
-    .catch(err => {
-      console.log(err);
-      res.status(500).json(err);
-    });
-  });
+          }
+      ]
+  })
+      .then(dbPostData => res.json(dbPostData)) // return the promise
+      .catch(err => {
+          console.log(err);
+          res.status(500).json(err);
+      })
+});
 
 router.get('/:id', (req, res) => {
   Post.findOne({
