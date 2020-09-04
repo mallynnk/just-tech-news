@@ -1,97 +1,94 @@
 const router = require('express').Router();
+const { Post, User, Vote, Comment } = require('../../models'); // these create the express endpoints
+// we want to pull information from Post as well as User, and Vote
 const sequelize = require('../../config/connection');
-const { Post, User, Vote, Comment } = require('../../models');
 
-// get all users
+// get all posts
 router.get('/', (req, res) => {
-  console.log('===============');
-  Post.findAll({
-      attributes: [
-          'id',
-          'post_url',
-          'title',
-          'created_at',
-          [sequelize.literal('(SELECT COUNT(*) FROM vote WHERE post.id = vote.post_id)'), 'vote_count']
-      ],
-      order: [['created_at', 'DESC']],
-      include: [ // this makes a JOIN 
-          {
-              model: Comment,
-              attributes: ['id', 'comment_text', 'post_id', 'user_id', 'created_at'],
-              include: {
-                  model: User,
-                  attributes: ['username']
-              }
-          },
-          {
-              model: User,
-              attributes: ['username']
-          }
-      ]
-  })
-      .then(dbPostData => res.json(dbPostData)) // return the promise
-      .catch(err => {
-          console.log(err);
-          res.status(500).json(err);
-      })
+    console.log('===============');
+    Post.findAll({
+        attributes: [
+            'id',
+            'post_url',
+            'title',
+            'created_at',
+            [sequelize.literal('(SELECT COUNT(*) FROM vote WHERE post.id = vote.post_id)'), 'vote_count']
+        ],
+        order: [['created_at', 'DESC']],
+        include: [ // this makes a JOIN 
+            {
+                model: Comment,
+                attributes: ['id', 'comment_text', 'post_id', 'user_id', 'created_at'],
+                include: {
+                    model: User,
+                    attributes: ['username']
+                }
+            },
+            {
+                model: User,
+                attributes: ['username']
+            }
+        ]
+    })
+        .then(dbPostData => res.json(dbPostData)) // return the promise
+        .catch(err => {
+            console.log(err);
+            res.status(500).json(err);
+        })
 });
 
+// get a single post
 router.get('/:id', (req, res) => {
-  Post.findOne({
-    where: {
-      id: req.params.id
-    },
-    attributes: [
-        'id',
-        'post_url',
-        'title',
-        'created_at',
-        [sequelize.literal('(SELECT COUNT(*) FROM vote WHERE post.id = vote.post_id)'), 'vote_count']
-      ],
-      include: [
-        // include the Comment model here:
-        {
-          model: Comment,
-          attributes: ['id', 'comment_text', 'post_id', 'user_id', 'created_at'],
-          include: {
-            model: User,
-            attributes: ['username']
-          }
+    Post.findOne({
+        where: {
+            id: req.params.id // sets the value of the id with req.params.id
         },
-        {
-          model: User,
-          attributes: ['username']
-        }
-      ]
-     })
-    .then(dbPostData => {
-      if (!dbPostData) {
-        res.status(404).json({ message: 'No post found with this id' });
-        return;
-      }
-      res.json(dbPostData);
+        attributes: [
+            'id',
+            'post_url',
+            'title',
+            'created_at',
+            [sequelize.literal('(SELECT COUNT(*) FROM vote WHERE post.id = vote.post_id)'), 'vote_count']
+        ],
+        include: [
+            {
+                model: Comment,
+                attributes: ['id', 'comment_text', 'post_id', 'user_id', 'created_at'],
+                include: {
+                    model: User,
+                    attributes: ['username']
+                }
+            },
+            {
+                model: User,
+                attributes: ['username']
+            }
+        ]
     })
-    .catch(err => {
-      console.log(err);
-      res.status(500).json(err);
-    });
+        .then(dbPostData => { // return the promise
+            if (!dbPostData) {
+                res.status(404).json({ message: 'No post found with this id' }); // 404 is user error
+                return;
+            }
+            res.json(dbPostData);
+        })
+        .catch(err => {
+            console.log(err);
+            res.status(500).json(err);
+        });
 });
 
+// create a post route
 router.post('/', (req, res) => {
-    // expects {title: 'Taskmaster goes public!', post_url: 'https://taskmaster.com/press', user_id: 1}
+    // expects json info back
     Post.create({
-      title: req.body.title,
-      post_url: req.body.post_url,
-      user_id: req.body.user_id
-    })
-      .then(dbPostData => res.json(dbPostData))
-      .catch(err => {
-        console.log(err);
-        res.status(500).json(err);
-      });
-  });
+        title: req.body.title,
+        post_url: req.body.post_url,
+        user_id: req.session.user_id
+      })
+})
 
-// PUT /api/posts/upvote
+//upvote
 router.put('/upvote', (req, res) => {
   // make sure the session exists first
   if (req.session) {
@@ -104,48 +101,49 @@ router.put('/upvote', (req, res) => {
       });
   }
 });
-  
+
+
+//create put route
 router.put('/:id', (req, res) => {
-  Post.update(
-    {
-      title: req.body.title
-    },
-    {
-      where: {
-        id: req.params.id
-      }
-    }
-  )
-    .then(dbPostData => {
-      if (!dbPostData) {
-        res.status(404).json({ message: 'No post found with this id' });
-        return;
-      }
-      res.json(dbPostData);
-    })
-    .catch(err => {
-      console.log(err);
-      res.status(500).json(err);
-    });
+    Post.update(
+        {
+            title: req.body.title // finding the post with req.body.title and replace the title of the post
+        },
+        {
+            where: {
+                id: req.params.id // matching the id
+            }
+        }
+    )
+        .then(dbUserData => {
+            if (!dbUserData[0]) {
+                res.status(404).json({ message: 'No user found with this id' });
+                return;
+            }
+            res.json(dbUserData);
+        })
+        .catch(err => {
+            console.log(err);
+            res.status(500).json(err);
+        });
 });
-
+// create delete/destroy route
 router.delete('/:id', (req, res) => {
-  Post.destroy({
-    where: {
-      id: req.params.id
-    }
-  })
-    .then(dbPostData => {
-      if (!dbPostData) {
-        res.status(404).json({ message: 'No post found with this id' });
-        return;
-      }
-      res.json(dbPostData);
+    Post.destroy({
+        where: {
+            id: req.params.id
+        }
     })
-    .catch(err => {
-      console.log(err);
-      res.status(500).json(err);
-    });
+        .then(dbPostData => {
+            if (!dbPostData) {
+                res.status(404).json({ message: 'No post with this id' });
+                return;
+            }
+            res.json(dbPostData);
+        })
+        .catch(err => {
+            console.log(err);
+            res.status(500).json(err);
+        });
 });
-
-module.exports = router;
+module.exports = router; // this exposes the changes/code to the express server. Keep this at the bottom of the file
